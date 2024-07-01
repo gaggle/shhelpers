@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [ "$#" -ne 3 ]; then
+    echo "Usage: $0 <owner> <repo> <tag>"
+    exit 1
+fi
+
+owner="$1"
+repo="$2"
+tag="$3"
+destination="test_helper/$repo"
+
+rm -rf $destination && mkdir -p "$destination" && cd "$destination"
+
+gh release download -R "$owner/$repo" --archive tar.gz -O "$repo.tar.gz"
+
+# Extract and strip the top-level directory
+tar -xzf "$repo.tar.gz" --strip-components=1
+
+# Clean up
+rm "$repo.tar.gz"
+
+echo "Successfully put $repo $tag to $destination"
