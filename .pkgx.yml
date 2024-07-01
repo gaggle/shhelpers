@@ -1,0 +1,6 @@
+dependencies:
+  bash: =5.2.21
+  bats: =1.11.0
+  zsh: =5.9.0
+env:
+  VERSION: 0.0.0
