@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+
+usage() {
+    echo "Usage: $0 [options]"
+    echo ""
+    echo "This script runs a series of checks to ensure your system is in good shape. It'll suggest remedies to fix any deficiencies."
+    echo ""
+    echo "Options:"
+    echo "  -h, --help    Display this help message and exit. No appointment needed!"
+    echo ""
+    echo "Remember, a check-up a day keeps the debuggers away!"
+}
+
+while (($#)); do
+    case "$1" in
+    -h | --help)
+        usage
+        exit 0
+        ;;
+    *) break ;;
+    esac
+done
+
+[ -d "test_helper/bats-support" ] || "$(dirname "$0")/get-bats-lib" ztombol bats-support v0.3.0
+[ -d "test_helper/bats-assert" ] || "$(dirname "$0")/get-bats-lib" ztombol bats-assert v0.3.0
+[ -d "test_helper/bats-mock" ] || "$(dirname "$0")/get-bats-lib" jasonkarns bats-mock v1.2.5
