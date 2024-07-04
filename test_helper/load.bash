@@ -1,0 +1,6 @@
+load "$(dirname "${BASH_SOURCE[0]}")/bats-assert/load"
+load "$(dirname "${BASH_SOURCE[0]}")/bats-github/load"
+load "$(dirname "${BASH_SOURCE[0]}")/bats-mock-easier/load"
+load "$(dirname "${BASH_SOURCE[0]}")/bats-mock/stub"
+load "$(dirname "${BASH_SOURCE[0]}")/bats-shell/load"
+load "$(dirname "${BASH_SOURCE[0]}")/bats-support/load"
