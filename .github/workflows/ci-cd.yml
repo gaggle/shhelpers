@@ -13,6 +13,10 @@ concurrency:
 jobs:
   version:
     runs-on: ubuntu-latest
+    outputs:
+      previous-tag: ${{ steps.parse.outputs.previous-tag }}
+      is-releasable: ${{ steps.parse.outputs.is-releasable }}
+      tag: ${{ steps.parse.outputs.tag }}
     steps:
       - uses: actions/checkout@v4
       - uses: pkgxdev/dev@v0
@@ -21,3 +25,21 @@ jobs:
         uses: ./.github/actions/version
         with:
           semver: ${{ env.VERSION }}
+
+  release:
+    needs: [ version ]
+    runs-on: ubuntu-latest
+    name: ${{ needs.version.outputs.is-releasable == 'true' && 'release' || 'release (dry-run)' }}
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Generate release description
+        run: |
+          PREVIOUS_TAG="${{ needs.version.outputs.previous-tag }}"
+          CHANGELOG_URL="https://github.com/${{ github.event.repository.full_name }}/compare/${PREVIOUS_TAG:-main}...${{ needs.version.outputs.tag }}"
+          
+          echo "**Full Changelog**: $CHANGELOG_URL" > ${{ github.workspace }}-CHANGELOG.txt
+          echo ::group::Changelog
+          cat "${{ github.workspace }}-CHANGELOG.txt"
+          echo ::endgroup::
