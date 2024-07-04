@@ -43,3 +43,10 @@ jobs:
           echo ::group::Changelog
           cat "${{ github.workspace }}-CHANGELOG.txt"
           echo ::endgroup::
+      - uses: softprops/action-gh-release@v2
+        if: needs.version.outputs.is-releasable == 'true'
+        with:
+          body_path: ${{ github.workspace }}-CHANGELOG.txt
+          generate_release_notes: false
+          tag_name: ${{ needs.version.outputs.tag }}
+          token: ${{ secrets.PAT }} # using our own PAT so other workflows run
