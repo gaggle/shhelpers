@@ -1,0 +1,100 @@
+#!/bin/bash
+set -euo pipefail
+
+check_git_tag_exists() {
+  git show-ref --tags "v$1" --quiet && echo "true" || echo "false"
+}
+
+get_previous_release_tag() {
+  local tags
+  tags=$(gh release list --json tagName -q '.[] | .tagName' 2>/dev/null)
+
+  if [[ -z "$tags" ]]; then
+    return 0  # No tags found, return nothing
+  fi
+
+  while read -r tag; do
+    if [[ "$tag" =~ ^v ]]; then
+      local version="${tag#v}"  # Remove 'v' prefix
+      if is_valid_semver "$version"; then
+        echo "$tag"
+        return 0
+      fi
+    fi
+  done <<< "$tags"
+}
+
+is_valid_semver() {
+  local version=$1
+  [[ $version =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]
+}
+
+log_output() {
+  echo ::group::Set outputs
+  echo "GITHUB_OUTPUT:"
+  cat "$GITHUB_OUTPUT"
+  echo "GITHUB_ENV:"
+  cat "$GITHUB_ENV"
+  echo ::endgroup::
+}
+
+normalize_semver() {
+  local input=$1
+  local semver=${input#v}  # Remove 'v' prefix if present
+
+  if is_valid_semver "$semver"; then
+      echo "$semver"
+  else
+    return 1
+  fi
+}
+
+parse_semver_component() {
+  local version="$1"
+  local component="$2"
+  local IFS='.'
+  read -ra parts <<< "$version"
+  if [ "${#parts[@]}" -ge "$component" ]; then
+    echo "${parts[component - 1]}"
+  else
+    echo ""
+  fi
+}
+
+set_output() {
+  local key="$1"
+  local value="$2"
+  local env_key="${3:-}"
+
+  if [ -z "$key" ]; then
+    echo "set_output requires key" >&2
+    return 1
+  fi
+
+  # If env_key is empty, convert key to upper snake case
+  if [ -z "$env_key" ]; then
+    env_key=$(echo "$key" | awk '{print toupper($0)}' | sed 's/-/_/g')
+  fi
+
+  echo "$key=$value" >> "$GITHUB_OUTPUT"
+  echo "$env_key=$value" >> "$GITHUB_ENV"
+}
+
+# Main execution
+semver=${INPUT_SEMVER:+$(normalize_semver "$INPUT_SEMVER")} || { echo "Error: INPUT_SEMVER is not a valid semver: $INPUT_SEMVER" >&2; exit 1; }
+tag=${semver:+"v$semver"}
+tag_exists=${tag:+$(check_git_tag_exists "$tag")}
+previous_release_tag=$(get_previous_release_tag)
+is_default_branch=$([ "${GITHUB_REF:-}" == "refs/heads/${INPUT_DEFAULT_BRANCH:-}" ] && echo "true" || echo "false")
+releasable=$([ "$is_default_branch" = "true" ] && [ "$tag_exists" == "false" ] && echo "true" || echo "false")
+
+set_output "semver" "$semver"
+set_output "major" "$(parse_semver_component "$semver" 1)"
+set_output "minor" "$(parse_semver_component "$semver" 2)"
+set_output "patch" "$(parse_semver_component "$semver" 3)"
+set_output "tag" "$tag"
+set_output "tag-exists" "$tag_exists"
+set_output "previous-tag" "$previous_release_tag"
+set_output "is-default-branch" "$is_default_branch"
+set_output "is-releasable" "$releasable"
+log_output
